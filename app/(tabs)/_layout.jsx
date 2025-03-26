@@ -6,31 +6,28 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../config/FirebaseConfig";
 
 export default function TabLayout() {
-
   const router = useRouter();
   const [authenticated, setAuthenticated] = useState(null);
-  
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      // User is signed in, see docs for a list of available properties
-      // https://firebase.google.com/docs/reference/js/auth.user
-      const uid = user.uid;
-      console.log(uid);
-      setAuthenticated(true);
-      // ...
-    } else {
-      setAuthenticated(false);
-      // User is signed out
-      // ...
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("User UID:", user.uid);
+        setAuthenticated(true);
+      } else {
+        setAuthenticated(false);
+      }
+    });
+
+    return () => unsubscribe(); // Cleanup function
+  }, []);
+
+  useEffect(() => {
+    if (authenticated === false) {
+      router.push("/login");
     }
   }, [authenticated]);
 
-  useEffect(() => {
-    if(authenticated==false){
-      router?.push('/login');
-    }
-  })
-  
   return (
     <Tabs
       screenOptions={{
@@ -49,7 +46,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="AddNew"
         options={{
-          tabBarLabel: "Add Social Media Accounts",
+          tabBarLabel: "Social Media Accounts",
           tabBarIcon: ({ color, size }) => (
             <FontAwesome name="plus-square" size={size} color={color} />
           ),

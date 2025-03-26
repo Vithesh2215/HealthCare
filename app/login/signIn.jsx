@@ -5,137 +5,222 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import React, { useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Colors from "../../constant/Colors";
 import { useRouter } from "expo-router";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "./../../config/FirebaseConfig";
+import {
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+} from "firebase/auth";
+import { auth } from "../../config/FirebaseConfig";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function SignIn() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
-  const [email, setEmail] = useState();
-  const [password, setPassword] = useState();
-
-  const OnSignInClick = () => {
-    if (!email || !password) {
-      Alert.alert("Please enter your email & password");
+  // Handle Sign-In Logic
+  const handleSignIn = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Login Failed", "Please enter both email and password.");
       return;
     }
 
-    signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // Signed in
-        const user = userCredential.user;
-        console.log(user);
+    setLoading(true);
+    try {
+      const response = await signInWithEmailAndPassword(auth, email, password);
+      const user = response.user;
 
-        router.replace('(tabs)');
-        // ...
-      })
-      .catch((error) => {
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        if(errorCode=='auth/invalid-credential'){
-          Alert.alert('Invalid email or password');
-        }
-      });
+      if (!user.emailVerified) {
+        Alert.alert(
+          "Email Not Verified",
+          "You haven't verified your email yet. Please check your inbox and verify your email before signing in."
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Store user ID in AsyncStorage
+      await AsyncStorage.setItem("user", user.uid);
+
+      // Reset input fields
+      setEmail("");
+      setPassword("");
+
+      // Navigate to the main app (tabs)
+      router.replace("(tabs)");
+    } catch (error) {
+      Alert.alert(
+        "Login Failed",
+        "Error signing in. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Forgot Password
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert(
+        "Forgot Password",
+        "Please enter your email to reset password."
+      );
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert("Password Reset", "Check your email for reset instructions.");
+    } catch (error) {
+      console.error("Password Reset Error: ", error);
+      Alert.alert("Error", "Failed to send reset email. Please try again.");
+    }
   };
 
   return (
-    <View
-      style={{
-        padding: 25,
-      }}
-    >
+    <SafeAreaView style={styles.container}>
       <Text style={styles.textHeader}>Let's Sign You In</Text>
-      <Text style={styles.subText}>Welcome Back</Text>
-      <Text style={styles.subText}>You've been missed!!</Text>
+      <Text style={styles.subText}>Welcome Back, You've been missed!</Text>
 
-      <View
-        style={{
-          marginTop: 25,
-        }}
-      >
+      <View style={styles.inputContainer}>
         <Text>Email</Text>
         <TextInput
-          placeholder="Email"
+          placeholder="Enter your email"
           style={styles.textInput}
-          onChangeText={(value) => setEmail(value)}
+          onChangeText={setEmail}
+          value={email}
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
       </View>
 
-      <View
-        style={{
-          marginTop: 25,
-        }}
-      >
+      <View style={styles.inputContainer}>
         <Text>Password</Text>
-        <TextInput
-          placeholder="Password"
-          secureTextEntry={true}
-          style={styles.textInput}
-          onChangeText={(value) => setPassword(value)}
-        />
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Enter your password"
+            secureTextEntry={!passwordVisible}
+            onChangeText={setPassword}
+            value={password}
+          />
+          <TouchableOpacity
+            onPress={() => setPasswordVisible(!passwordVisible)}
+          >
+            <Ionicons
+              name={passwordVisible ? "eye-off" : "eye"}
+              size={22}
+              color="gray"
+              style={styles.eyeIcon}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <TouchableOpacity style={styles.button}
-        onPress={OnSignInClick}
+      <TouchableOpacity onPress={handleForgotPassword}>
+        <Text style={styles.forgotPassword}>Forgot Password?</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleSignIn}
+        disabled={loading}
       >
-        <Text
-          style={{
-            textAlign: "center",
-            color: "white",
-            fontSize: 17,
-          }}
-        >
-          Login
-        </Text>
+        {loading ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Login</Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.buttonCreate}
         onPress={() => router.push("login/signUp")}
       >
-        <Text
-          style={{
-            textAlign: "center",
-            color: Colors.PRIMARY,
-            fontSize: 17,
-          }}
-        >
-          Create Account
-        </Text>
+        <Text style={styles.buttonCreateText}>Create Account</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
+// Styles
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 25,
+    backgroundColor: "#fff",
+  },
   textHeader: {
     fontSize: 30,
     fontWeight: "bold",
     marginTop: 15,
+    textAlign: "center",
   },
   subText: {
-    fontSize: 30,
-    fontWeight: "bold",
+    fontSize: 18,
+    fontWeight: "500",
     marginTop: 10,
+    textAlign: "center",
     color: Colors.GRAY,
   },
+  inputContainer: {
+    marginTop: 25,
+  },
   textInput: {
-    padding: 10,
+    height: 50,
+    paddingHorizontal: 12,
     borderWidth: 1,
     fontSize: 17,
     borderRadius: 10,
     marginTop: 5,
     backgroundColor: "white",
+    borderColor: Colors.GRAY,
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.GRAY,
+    borderRadius: 10,
+    backgroundColor: "white",
+    height: 50,
+    paddingHorizontal: 10,
+    justifyContent: "space-between",
+  },
+  passwordInput: {
+    flex: 1,
+    height: 50,
+    paddingHorizontal: 10,
+    fontSize: 17,
+  },
+  eyeIcon: {
+    padding: 10,
+  },
+  forgotPassword: {
+    color: Colors.PRIMARY,
+    textAlign: "right",
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: "500",
   },
   button: {
     padding: 15,
     backgroundColor: Colors.PRIMARY,
     borderRadius: 10,
     marginTop: 35,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 17,
+    fontWeight: "bold",
   },
   buttonCreate: {
     padding: 15,
@@ -144,5 +229,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderWidth: 1,
     borderColor: Colors.PRIMARY,
+  },
+  buttonCreateText: {
+    textAlign: "center",
+    color: Colors.PRIMARY,
+    fontSize: 17,
+    fontWeight: "bold",
   },
 });
