@@ -30,7 +30,7 @@ export default function HomeScreen() {
   const [hasMoreNext, setHasMoreNext] = useState(true);
   const [hasMorePrev, setHasMorePrev] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 2;
+  const pageSize = 20;
 
   const fetchVitals = async (direction = "initial") => {
     try {
