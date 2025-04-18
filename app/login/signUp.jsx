@@ -98,16 +98,17 @@ export default function SignUp() {
         lastName: "",
         gender: "",
         age: 0, // Number
+        assignedDoctor: "YVhvkqJMDzXABHWf89oNO4G7ACg1", // String
         bpHigh: false, // Boolean
         bpLow: false, // Boolean
         sugar: false, // Boolean
         height: 0, // Number
         weight: 0, // Number
-        profileImhandle: "",
-        dateOfJoining: new Date().toISOString(),
+        dateOfJoining: Date.now(),
         bloodGroup: "",
+        socialMediaHandle: "",
         address: "",
-        mobileNumber: 0, // Number
+        mobileNumber: "",
       });
 
       // Send email verification

@@ -57,10 +57,24 @@ export default function SignIn() {
       // Navigate to the main app (tabs)
       router.replace("(tabs)");
     } catch (error) {
-      Alert.alert(
-        "Login Failed",
-        "Error signing in. Please try again."
-      );
+      console.error("Login Error: ", error);
+      switch (error.code) {
+        case "auth/invalid-email":
+          Alert.alert("Login Failed", "The email address is not valid.");
+          break;
+        case "auth/user-disabled":
+          Alert.alert("Login Failed", "This user account has been disabled.");
+          break;
+        case "auth/user-not-found":
+          Alert.alert("Login Failed", "No user found with this email.");
+          break;
+        case "auth/wrong-password":
+          Alert.alert("Login Failed", "Incorrect password. Please try again.");
+          break;
+        default:
+          Alert.alert("Login Failed", "Error signing in. Please try again.");
+          break;
+      }
     } finally {
       setLoading(false);
     }

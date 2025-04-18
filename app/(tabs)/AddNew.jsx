@@ -6,17 +6,43 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Colors from "../../constant/Colors";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 export default function AddNew() {
-  // const [instagram, setInstagram] = useState("");
   const [socialmediahandle, setHandle] = useState("");
+  const [existingHandle, setExistingHandle] = useState(null);
 
   const db = getFirestore(); // Firestore instance
   const auth = getAuth(); // Firebase Authentication instance
+
+  useEffect(() => {
+    const fetchHandle = async () => {
+      const user = auth.currentUser; // Get the currently logged-in user
+
+      if (!user) {
+        Alert.alert("User not logged in");
+        return;
+      }
+
+      try {
+        const docRef = doc(db, "patients", user.uid); // Reference to the 'patients' collection
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          setExistingHandle(docSnap.data().socialMediaHandle); // Set the existing handle
+          setHandle(docSnap.data().socialMediaHandle); // Pre-fill the input field
+        }
+      } catch (error) {
+        console.error("Error fetching document: ", error);
+        Alert.alert("Failed to fetch social media handle");
+      }
+    };
+
+    fetchHandle();
+  }, []);
 
   const OnClickAdd = async (mediahandle) => {
     const user = auth.currentUser; // Get the currently logged-in user
@@ -27,30 +53,20 @@ export default function AddNew() {
     }
 
     try {
-      // const userRef = doc(db, "users", user.uid); // Reference to the Firestore document
+      await setDoc(
+        doc(db, "patients", user.uid), // Reference to the 'patients' collection
+        {
+          socialMediaHandle: mediahandle, // Update the socialMediaHandle field
+        },
+        { merge: true } // Merge with existing data
+      );
 
-      // await setDoc(
-      //   userRef,
-      //   {
-      //     socialMedia: {
-      //       socialmediahandle: twitterHandle,
-      //       instagram: instagramHandle,
-      //     },
-      //   },
-      //   { merge: true } // Ensures existing data isn't overwritten
-      // );
-
-      await setDoc(doc(db, "Social Media Handle", user.uid), {
-        id: user.uid,
-        Handle: mediahandle,
-      }, {merge: true});
-
-      Alert.alert("Social media handle added successfully!");
-      // setInstagram(""); // Clear input fields
-      setHandle("");
+      Alert.alert("Social media handle added/updated successfully!");
+      setExistingHandle(mediahandle); // Update the existing handle
+      setHandle(""); // Clear input field
     } catch (error) {
       console.error("Error updating document: ", error);
-      Alert.alert("Failed to add social media handles");
+      Alert.alert("Failed to add/update social media handle");
     }
   };
 
@@ -60,8 +76,14 @@ export default function AddNew() {
       <Text style={styles.textHeader}>Your Social Media</Text>
       <Text style={styles.textHeader}>Handle Here</Text>
 
+      {existingHandle && (
+        <Text style={styles.existingHandle}>
+          Existing Handle: {existingHandle}
+        </Text>
+      )}
+
       <View style={styles.inputContainer}>
-        <Text>Socail Media Handle</Text>
+        <Text>Social Media Handle</Text>
         <TextInput
           placeholder="Enter your Social Media Handle"
           style={styles.textInput}
@@ -74,7 +96,9 @@ export default function AddNew() {
         style={styles.button}
         onPress={() => OnClickAdd(socialmediahandle)}
       >
-        <Text style={styles.buttonText}>Add / Update Social Media Handle</Text>
+        <Text style={styles.buttonText}>
+          {existingHandle ? "Update Social Media Handle" : "Add Social Media Handle"}
+        </Text>
       </TouchableOpacity>
 
       <Text style={styles.note}>
@@ -92,6 +116,12 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: "bold",
     marginTop: 8,
+    textAlign: "center",
+  },
+  existingHandle: {
+    fontSize: 16,
+    color: "gray",
+    marginTop: 15,
     textAlign: "center",
   },
   inputContainer: {
