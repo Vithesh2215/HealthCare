@@ -20,7 +20,7 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.imageContainer}>
         <Image
-          source={require("./../../assets/images/login.png")}
+          source={require("./../../assets/images/Register.png")}
           style={styles.image}
         />
       </View>

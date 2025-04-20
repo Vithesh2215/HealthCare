@@ -138,9 +138,9 @@ export default function SignIn() {
         </View>
       </View>
 
-      <TouchableOpacity onPress={handleForgotPassword}>
-        <Text style={styles.forgotPassword}>Forgot Password?</Text>
-      </TouchableOpacity>
+      <Text style={styles.forgotPassword} onPress={handleForgotPassword}>
+        Forgot Password?
+      </Text>
 
       <TouchableOpacity
         style={styles.button}
