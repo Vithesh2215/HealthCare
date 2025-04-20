@@ -379,35 +379,47 @@ const EditModal = ({
         <ScrollView contentContainerStyle={styles.modalScrollContent}>
           <Text style={styles.modalTitle}>Edit Profile Details</Text>
 
-          <TextInput
-            style={styles.input}
-            placeholder="First Name"
-            value={userDetails.firstName || ""}
-            onChangeText={(text) => handleFieldChange("firstName", text)}
-          />
+          <View style={{ marginBottom: 16 }}>
+            <Text style={styles.fieldLabel}>First Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="First Name"
+              value={userDetails.firstName || ""}
+              onChangeText={(text) => handleFieldChange("firstName", text)}
+            />
+          </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Last Name"
-            value={userDetails.lastName || ""}
-            onChangeText={(text) => handleFieldChange("lastName", text)}
-          />
+          <View style={{ marginBottom: 16 }}>
+            <Text style={styles.fieldLabel}>Last Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Last Name"
+              value={userDetails.lastName || ""}
+              onChangeText={(text) => handleFieldChange("lastName", text)}
+            />
+          </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Mobile Number"
-            value={userDetails.mobileNumber || ""}
-            onChangeText={(text) => handleFieldChange("mobileNumber", text)}
-            keyboardType="phone-pad"
-            maxLength={10}
-          />
+          <View style={{ marginBottom: 16 }}>
+            <Text style={styles.fieldLabel}>Mobile Number</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Mobile Number"
+              value={userDetails.mobileNumber || ""}
+              onChangeText={(text) => handleFieldChange("mobileNumber", text)}
+              keyboardType="phone-pad"
+              maxLength={10}
+            />
+          </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Address"
-            value={userDetails.address || ""}
-            onChangeText={(text) => handleFieldChange("address", text)}
-          />
+          <View style={{ marginBottom: 16 }}>
+            <Text style={styles.fieldLabel}>Address</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Address"
+              value={userDetails.address || ""}
+              onChangeText={(text) => handleFieldChange("address", text)}
+            />
+          </View>
 
           <OptionSelector
             label="Gender"
@@ -473,14 +485,18 @@ const EditModal = ({
           ))}
 
           {["age", "height", "weight"].map((field) => (
-            <TextInput
-              key={field}
-              style={styles.input}
-              placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-              value={userDetails[field]?.toString() || ""}
-              onChangeText={(text) => handleFieldChange(field, text)}
-              keyboardType="numeric"
-            />
+            <View key={field} style={{ marginBottom: 16 }}>
+              <Text style={styles.fieldLabel}>
+                {field.charAt(0).toUpperCase() + field.slice(1)}
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                value={userDetails[field]?.toString() || ""}
+                onChangeText={(text) => handleFieldChange(field, text)}
+                keyboardType="numeric"
+              />
+            </View>
           ))}
 
           <View style={styles.modalButtonContainer}>

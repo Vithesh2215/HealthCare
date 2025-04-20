@@ -15,7 +15,7 @@ import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, arrayUnion } from "firebase/firestore";
 import { auth, db } from "../../config/FirebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable } from "react-native";
@@ -110,6 +110,15 @@ export default function SignUp() {
         address: "",
         mobileNumber: "",
       });
+
+      const doctorId = "YVhvkqJMDzXABHWf89oNO4G7ACg1"; // Replace with the actual doctor ID
+      await setDoc(
+        doc(db, "doctors", doctorId),
+        {
+          patientIds: arrayUnion(user.uid), // Add the current user's UID to the array
+        },
+        { merge: true } // Merge with existing data
+      );
 
       // Send email verification
       await sendEmailVerification(user);
@@ -270,16 +279,16 @@ const styles = StyleSheet.create({
     marginVertical: 15, // Adds space above and below the checkboxes
   },
   checkboxContainer: {
-  flexDirection: 'row',
-  alignItems: 'flex-start', // Align items to top
-  marginVertical: 8, // Space between checkboxes
-},
-checkboxLabel: {
-  flex: 1, // Allow text to wrap properly
-  marginLeft: 8,
-  fontSize: 14,
-  color: '#6c757d',
-},
+    flexDirection: "row",
+    alignItems: "flex-start", // Align items to top
+    marginVertical: 8, // Space between checkboxes
+  },
+  checkboxLabel: {
+    flex: 1, // Allow text to wrap properly
+    marginLeft: 8,
+    fontSize: 14,
+    color: "#6c757d",
+  },
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
