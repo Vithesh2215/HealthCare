@@ -36,7 +36,6 @@ export default function AddNew() {
           setHandle(docSnap.data().socialMediaHandle); // Pre-fill the input field
         }
       } catch (error) {
-        console.error("Error fetching document: ", error);
         Alert.alert("Failed to fetch social media handle");
       }
     };
@@ -65,7 +64,6 @@ export default function AddNew() {
       setExistingHandle(mediahandle); // Update the existing handle
       setHandle(""); // Clear input field
     } catch (error) {
-      console.error("Error updating document: ", error);
       Alert.alert("Failed to add/update social media handle");
     }
   };

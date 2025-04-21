@@ -12,7 +12,6 @@ export default function TabLayout() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        console.log("User UID:", user.uid);
         setAuthenticated(true);
       } else {
         setAuthenticated(false);

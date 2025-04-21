@@ -37,7 +37,7 @@ export default function HomeScreen() {
       const user = auth.currentUser;
       if (!user) return;
 
-      const vitalsRef = collection(db, "Vitals");
+      const vitalsRef = collection(db, "vitals");
 
       let q = query(
         vitalsRef,

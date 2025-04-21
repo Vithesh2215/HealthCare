@@ -57,7 +57,6 @@ export default function SignIn() {
       // Navigate to the main app (tabs)
       router.replace("(tabs)");
     } catch (error) {
-      console.error("Login Error: ", error);
       switch (error.code) {
         case "auth/invalid-email":
           Alert.alert("Login Failed", "The email address is not valid.");
@@ -93,7 +92,6 @@ export default function SignIn() {
       await sendPasswordResetEmail(auth, email);
       Alert.alert("Password Reset", "Check your email for reset instructions.");
     } catch (error) {
-      console.error("Password Reset Error: ", error);
       Alert.alert("Error", "Failed to send reset email. Please try again.");
     }
   };

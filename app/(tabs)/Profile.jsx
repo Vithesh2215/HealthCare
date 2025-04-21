@@ -137,7 +137,6 @@ const Profile = () => {
         profileImage: data.secure_url,
       }));
     } catch (error) {
-      console.error("Upload Error:", error);
       let errorMessage = "Failed to upload image";
 
       if (error.name === "AbortError") {
