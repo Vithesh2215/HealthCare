@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,16 +14,22 @@ import {
   where,
   orderBy,
   getDocs,
+  doc,
+  getDoc,
+  addDoc,
   limit,
   startAfter,
-  startAt,
   endBefore,
+  serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "../../config/FirebaseConfig";
+import { API_BASE_URL } from "@env"; // Requires `react-native-dotenv`
 
 export default function HomeScreen() {
   const [latestVital, setLatestVital] = useState(null);
   const [previousVitals, setPreviousVitals] = useState([]);
+  const [esp32Vitals, setEsp32Vitals] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lastVisible, setLastVisible] = useState(null);
   const [firstVisible, setFirstVisible] = useState(null);
@@ -81,9 +87,8 @@ export default function HomeScreen() {
       setPreviousVitals(vitalsList);
       setFirstVisible(querySnapshot.docs[0]);
       setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]);
-
       setHasMoreNext(querySnapshot.docs.length === pageSize);
-      setHasMorePrev(direction !== "initial"); // Ensure that "Prev" is disabled at the start
+      setHasMorePrev(direction !== "initial");
 
       if (direction === "initial" && vitalsList.length > 0) {
         setLatestVital(vitalsList[0]);
@@ -118,9 +123,92 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (!isUploading) {
+        uploadVitalsFromESP32();
+      }
+    }, 20000); // 20 seconds
+
+    return () => clearInterval(intervalId); // Clear on unmount
+  }, [isUploading]);
+
+  const uploadVitalsFromESP32 = async () => {
+    setIsUploading(true);
+    try {
+      const response = await fetch("http://192.168.180.22/data");
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Invalid response: not JSON");
+      }
+
+      const data = await response.json();
+
+      const { temperature, humidity, heartRate, spo2, status } = data;
+
+      const vitalsData = {
+        SpO2: spo2 !== "--" ? parseInt(spo2) : null,
+        heartRate: heartRate !== "--" ? parseInt(heartRate) : null,
+        temperature,
+        status,
+      };
+
+      setEsp32Vitals(vitalsData);
+
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const patientSnap = await getDoc(doc(db, "patients", user.uid));
+      if (!patientSnap.exists()) return;
+
+      const patient = patientSnap.data();
+
+      const requestPayload = {
+        age: patient.age,
+        bloodGroup: patient.bloodGroup,
+        hasBpHigh: patient.bpHigh,
+        hasBpLow: patient.bpLow,
+        gender: patient.gender,
+        height: patient.height,
+        hasDiabetes: patient.sugar,
+        weight: patient.weight,
+        heartRate: vitalsData.heartRate,
+        SpO2: vitalsData.SpO2,
+        temperature: vitalsData.temperature,
+      };
+
+      const apiResponse = await fetch(`${API_BASE_URL}/predict/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestPayload),
+      });
+
+      const prediction = await apiResponse.json();
+
+      console.log("API Response:", prediction);
+
+      const { status: vitalsStatus, ...vitalsToStore } = vitalsData;
+
+
+      await addDoc(collection(db, "vitals"), {
+        ...vitalsToStore,
+        patientId: user.uid,
+        prediction: prediction.prediction,
+        confidence: prediction.confidence,
+        timestamp: serverTimestamp(),
+      });
+
+      console.log("Vitals uploaded with prediction.");
+    } catch (error) {
+      console.error("Failed to fetch or upload vitals:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.headerContainer}>
         <Text style={styles.header}>Patient Vitals</Text>
         <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
@@ -128,7 +216,6 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Latest Vitals Card */}
       {latestVital ? (
         <View style={styles.card}>
           <Text style={styles.latestVitalText}>Latest Vitals</Text>
@@ -140,11 +227,9 @@ export default function HomeScreen() {
         <Text style={styles.noVitalsText}>No vitals available</Text>
       )}
 
-      {/* Previous Vitals Table */}
       <Text style={styles.previousVitalsText}>All Vital Readings</Text>
       {previousVitals.length > 0 ? (
         <View style={styles.tableContainer}>
-          {/* Table Header */}
           <View style={styles.tableHeader}>
             <Text style={styles.tableHeaderText}>#</Text>
             <Text style={styles.tableHeaderText}>SpO2</Text>
@@ -152,7 +237,6 @@ export default function HomeScreen() {
             <Text style={styles.tableHeaderText}>Temp (°C)</Text>
           </View>
 
-          {/* Table Rows */}
           <FlatList
             data={previousVitals}
             keyExtractor={(item) => item.id}
@@ -174,7 +258,6 @@ export default function HomeScreen() {
             }
           />
 
-          {/* Pagination Buttons */}
           <View style={styles.paginationContainer}>
             {hasMorePrev && (
               <TouchableOpacity
@@ -201,33 +284,21 @@ export default function HomeScreen() {
   );
 }
 
-// Styles
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#f8f8f8",
-  },
+  container: { flex: 1, padding: 20, backgroundColor: "#f8f8f8" },
   headerContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 10,
   },
-  header: {
-    fontSize: 24,
-    fontWeight: "bold",
-  },
+  header: { fontSize: 24, fontWeight: "bold" },
   refreshButton: {
     backgroundColor: "#007bff",
     paddingVertical: 8,
     paddingHorizontal: 15,
     borderRadius: 5,
   },
-  refreshButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
+  refreshButtonText: { color: "white", fontWeight: "bold" },
   card: {
     backgroundColor: "#fff",
     padding: 15,
@@ -238,24 +309,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-  latestVitalText: {
-    fontWeight: "bold",
-    fontSize: 18,
-    marginBottom: 5,
-  },
-  previousVitalsText: {
-    fontWeight: "bold",
-    fontSize: 16,
-    marginTop: 15,
-  },
+  latestVitalText: { fontWeight: "bold", fontSize: 18, marginBottom: 5 },
+  previousVitalsText: { fontWeight: "bold", fontSize: 16, marginTop: 15 },
   noVitalsText: {
     fontSize: 16,
     textAlign: "center",
     color: "gray",
     marginTop: 10,
   },
-
-  // Table Styles
   tableContainer: {
     borderWidth: 1,
     borderColor: "#ddd",
@@ -279,11 +340,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#ddd",
     paddingVertical: 10,
   },
-  tableCell: {
-    flex: 1,
-    textAlign: "center",
-    color: "#333",
-  },
+  tableCell: { flex: 1, textAlign: "center", color: "#333" },
   paginationContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -295,8 +352,5 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
     borderRadius: 5,
   },
-  pageButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
+  pageButtonText: { color: "white", fontWeight: "bold" },
 });
